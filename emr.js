@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk');
+const config = require('./config.dev.json')
 const emr = AWS.EMR({
   region: process.env.AWS_REGION || 'cn-northwest-1'
 });
@@ -7,10 +8,10 @@ const sns = AWS.SNS({
   region: process.env.AWS_REGION || 'cn-northwest-1'
 });
 
-const CLUSTER_ID = process.env.EMR_CLUSTER_ID || 'j-34LGYM3BOB5C7';
-const INSTANCE_GROUP_ID =  process.env.EMR_INSTANCE_GROUP_ID || 'ig-1G254PFJDW5SY';
-const INTERVAL = process.env.EMR_INTERVAL || 30;
-const timeout = process.env.EMR_TIMEOUT || 10 * 60;
+const CLUSTER_ID = config.emr_cluster_id;
+const INSTANCE_GROUP_ID =  config.emr_instance_group_id;
+const INTERVAL = config.emr_interval;
+const timeout = config.emr_timeout;
 
 exports.scaleOut =  async (event, context) => {
   let _timeout = timeout;
@@ -19,7 +20,7 @@ exports.scaleOut =  async (event, context) => {
     ClusterId: CLUSTER_ID,
     InstanceGroups: {
       InstanceGroupId: INSTANCE_GROUP_ID,
-      InstanceCount: process.env.EMR_DISIRED_INSTANCE_COUNT || 3
+      InstanceCount: config.emr_desired_instance_count || 3
     }
   };
 
@@ -33,7 +34,7 @@ exports.scaleOut =  async (event, context) => {
 
     if (_timeout < 0) {
       const snsParams = {
-        TopicArn: process.env.TOPIC_ARN || 'arn:aws-cn:sns:cn-northwest-1:057005827724:EMR',
+        TopicArn: config.emr_topic_arn,
         Message: message
       };
 
@@ -60,7 +61,7 @@ exports.scaleIn = async (event, context) => {
     ClusterId: CLUSTER_ID,
     InstanceGroups: {
       InstanceGroupId: INSTANCE_GROUP_ID,
-      InstanceCount: process.env.EMR_INITIAL_INSTANCE_COUNT || 1
+      InstanceCount: config.emr_initial_instance_count || 1
     }
   };
 
