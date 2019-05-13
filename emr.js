@@ -1,10 +1,10 @@
 const AWS = require('aws-sdk');
 const config = require('./config.dev.json')
-const emr = AWS.EMR({
+const emr = new AWS.EMR({
   region: process.env.AWS_REGION || 'cn-northwest-1'
 });
 
-const sns = AWS.SNS({
+const sns = new AWS.SNS({
   region: process.env.AWS_REGION || 'cn-northwest-1'
 });
 
@@ -18,17 +18,20 @@ exports.scaleOut =  async (event, context) => {
 
   const params = {
     ClusterId: CLUSTER_ID,
-    InstanceGroups: {
-      InstanceGroupId: INSTANCE_GROUP_ID,
-      InstanceCount: config.emr_desired_instance_count || 3
-    }
+    InstanceGroups: [
+      {
+        InstanceGroupId: INSTANCE_GROUP_ID,
+        InstanceCount: config.emr_desired_instance_count || 3
+      }
+    ]
   };
 
   // Scale out instance group
-  await emr.modifyInstanceGroups(params).promise();
+  await emr.modifyInstanceGroups(params).promise()
 
   // Loop to get instance group status
   const interval = setInterval(async () => {
+    console.log('ahah')
     _timeout -= INTERVAL;
     const message = `EMR cluster ${CLUSTER_ID} scale out failed`;
 
@@ -45,6 +48,8 @@ exports.scaleOut =  async (event, context) => {
 
     const status = await getInstanceGroupStatus(CLUSTER_ID, INSTANCE_GROUP_ID);
 
+    console.log(status)
+
     if (status === 'RUNNING') {
        clearInterval(interval);
        return 'Scale out finished';
@@ -59,10 +64,12 @@ exports.scaleIn = async (event, context) => {
 
   const params = {
     ClusterId: CLUSTER_ID,
-    InstanceGroups: {
-      InstanceGroupId: INSTANCE_GROUP_ID,
-      InstanceCount: config.emr_initial_instance_count || 1
-    }
+    InstanceGroups: [
+      {
+        InstanceGroupId: INSTANCE_GROUP_ID,
+        InstanceCount: config.emr_initial_instance_count || 1
+      }
+    ]
   };
 
   return await emr.modifyInstanceGroups(params).promise();
