@@ -13,9 +13,6 @@
 
 service: aws-emr-schedule # NOTE: update this with your service name
 
-plugins:
-  - serverless-plugin-embedded-env-in-code
-
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
 # frameworkVersion: "=X.X.X"
@@ -56,6 +53,7 @@ package:
     - .gitignore
     - .idea/**
     - .git/**
+    - test/**
     - node_modules/**
     - package.json
     - package-lock.json
@@ -63,20 +61,22 @@ package:
   individually: true
 
 functions:
-  emr-scale-out:
+  scale-out:
     handler: emr.scaleOut
-    timeout: 900
+    timeout: ${file(./config.${self:provider.stage}.json):emr_timeout}
     role: emrLambdaRole
+    reservedConcurrency: 1
     events:
       - schedule:
           name: emr-scale-out-trigger
           description: Trigger EMR Scale out in 3:00AM +08:00
           rate: cron(0 19 * * ? *)
           enabled: true
-  emr-scale-in:
+  scale-in:
     handler: emr.scaleIn
     timeout: 10
     role: emrLambdaRole
+    reservedConcurrency: 1
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -115,6 +115,11 @@ functions:
 # you can add CloudFormation resource templates here
 resources:
   Resources:
+    emrScaleOutFailedTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: EMR
+        TopicName: emr-scale-out-failed
     emrLambdaRole:
       Type: AWS::IAM::Role
       Properties:
@@ -134,10 +139,10 @@ resources:
               Statement:
                 - Effect: Allow
                   Action:
-                    - logs:*
-                  Resource:
-                    - arn:aws-cn:logs:*:*:log-group:*
-                    - arn:aws-cn:logs:*:*:log-group:*:*:*
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: arn:aws-cn:logs:*:*:*
           - PolicyName: emr
             PolicyDocument:
               Version: "2012-10-17"
@@ -147,3 +152,12 @@ resources:
                     - elasticmapreduce:ModifyInstanceGroups
                     - elasticmapreduce:ListInstanceGroups
                   Resource: arn:aws-cn:elasticmapreduce:*:*:cluster/${file(./config.${self:provider.stage}.json):emr_cluster_id}
+          - PolicyName: sns
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sns:Publish
+                  Resource:
+                    - !Ref emrScaleOutFailedTopic

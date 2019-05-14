@@ -13,7 +13,10 @@
   "author": "Joe SHI <hellojoeshi@gmail.com>",
   "license": "MIT",
   "dependencies": {
+  },
+  "devDependencies": {
     "aws-sdk": "^2.453.0",
-    "serverless-plugin-embedded-env-in-code": "^0.1.0"
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
   }
 }

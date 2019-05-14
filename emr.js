@@ -1,93 +1,100 @@
 const AWS = require('aws-sdk');
-const config = require('./config.dev.json')
+const config = require('./config.dev.json');
+
 const emr = new AWS.EMR({
-  region: process.env.AWS_REGION || 'cn-northwest-1'
+  region: config.region || 'cn-northwest-1'
 });
 
 const sns = new AWS.SNS({
-  region: process.env.AWS_REGION || 'cn-northwest-1'
+  region: config.region || 'cn-northwest-1'
 });
 
 const CLUSTER_ID = config.emr_cluster_id;
 const INSTANCE_GROUP_ID =  config.emr_instance_group_id;
-const INTERVAL = config.emr_interval;
-const timeout = config.emr_timeout;
+const TIMEOUT = config.emr_timeout;
 
 exports.scaleOut =  async (event, context) => {
-  let _timeout = timeout;
 
+  console.info(JSON.stringify(event));
+  console.info(JSON.stringify(context));
+
+  let _timeout = TIMEOUT;
   const params = {
     ClusterId: CLUSTER_ID,
     InstanceGroups: [
       {
         InstanceGroupId: INSTANCE_GROUP_ID,
-        InstanceCount: config.emr_desired_instance_count || 3
+        InstanceCount: config.emr_desired_instance_count
       }
     ]
   };
 
+  const topicArn = `arn:aws-cn:sns:${config.region}:${getAccountId(context)}:emr-scale-out-failed`;
+
   // Scale out instance group
-  await emr.modifyInstanceGroups(params).promise()
+  await emr.modifyInstanceGroups(params).promise();
+  // wait for cluster to run into resizing status, wait for 2 minutes
+
+  const errMessage = `EMR cluster ${CLUSTER_ID} scale out failed`;
 
   // Loop to get instance group status
-  const interval = setInterval(async () => {
-    console.log('ahah')
-    _timeout -= INTERVAL;
-    const message = `EMR cluster ${CLUSTER_ID} scale out failed`;
+  while (1) {
+    await sleep(10 * 1000);
+    _timeout -= 10;
 
     if (_timeout < 0) {
       const snsParams = {
-        TopicArn: config.emr_topic_arn,
-        Message: message
+        TopicArn: topicArn,
+        Message: errMessage
       };
 
       await sns.publish(snsParams).promise();
-      clearInterval(interval);
-      throw new Error(message);
+
+      throw new Error(errMessage);
     }
 
-    const status = await getInstanceGroupStatus(CLUSTER_ID, INSTANCE_GROUP_ID);
+    const instanceGroup = await getInstanceGroup(CLUSTER_ID, INSTANCE_GROUP_ID);
 
-    console.log(status)
+    console.log(`status: ${instanceGroup.Status.State}, requested: ${instanceGroup.RequestedInstanceCount}, current: ${instanceGroup.RunningInstanceCount}`);
 
-    if (status === 'RUNNING') {
-       clearInterval(interval);
-       return 'Scale out finished';
+    if (instanceGroup.Status.State === 'RUNNING' && instanceGroup.RequestedInstanceCount <= instanceGroup.RunningInstanceCount) {
+      // TODO: INSERT CODE HERE TO submit EMR step
+
+      return 'OK'
     }
-
-  }, INTERVAL * 1000);
+  }
 
 };
 
 
-exports.scaleIn = async (event, context) => {
+exports.scaleIn = async () => {
 
   const params = {
     ClusterId: CLUSTER_ID,
     InstanceGroups: [
       {
         InstanceGroupId: INSTANCE_GROUP_ID,
-        InstanceCount: config.emr_initial_instance_count || 1
+        InstanceCount: config.emr_initial_instance_count
       }
     ]
   };
 
   return await emr.modifyInstanceGroups(params).promise();
-
 };
 
 
-/**
- * Get the instance Group status by cluster Id and groupID
- * @param clusterId
- * @param groupId
- * @returns {String}
- */
-async function getInstanceGroupStatus(clusterId, groupId) {
+async function getInstanceGroup(clusterId, groupId) {
 
   const groupsData = await emr.listInstanceGroups({ ClusterId: clusterId }).promise();
 
-  const instanceGroup = groupsData.InstanceGroups.find(group => group.Id === groupId );
+  return groupsData.InstanceGroups.find(group => group.Id === groupId );
 
-  return instanceGroup.Status.State
+}
+
+function sleep(millis) {
+  return new Promise(resolve => setTimeout(resolve, millis));
+}
+
+function getAccountId(context) {
+  return context.invokedFunctionArn.split(':')[4]
 }
