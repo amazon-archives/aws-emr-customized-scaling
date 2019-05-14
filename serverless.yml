@@ -54,6 +54,7 @@ package:
     - .idea/**
     - .git/**
     - test/**
+    - assets/**
     - node_modules/**
     - package.json
     - package-lock.json
