@@ -2,11 +2,11 @@ const AWS = require('aws-sdk');
 const config = require('./config.dev.json');
 
 const emr = new AWS.EMR({
-  region: config.region || 'cn-northwest-1'
+  region: config.region || 'us-east-1'
 });
 
 const sns = new AWS.SNS({
-  region: config.region || 'cn-northwest-1'
+  region: config.region || 'us-east-1'
 });
 
 const CLUSTER_ID = config.emr_cluster_id;
@@ -29,7 +29,8 @@ exports.scaleOut =  async (event, context) => {
     ]
   };
 
-  const topicArn = `arn:aws-cn:sns:${config.region}:${getAccountId(context)}:emr-scale-out-failed`;
+  const aws_partition = config.region.startsWith('cn-') ? 'aws-cn': 'aws';
+  const topicArn = `arn:${aws_partition}:sns:${config.region}:${getAccountId(context)}:emr-scale-out-failed`;
 
   // Scale out instance group
   await emr.modifyInstanceGroups(params).promise();

@@ -1,5 +1,5 @@
 {
-  "region": "cn-northwest-1",
+  "region": "us-east-1",
   "emr_cluster_id": "j-34LGYM3BOB5C7",
   "emr_instance_group_id": "ig-1G254PFJDW5SY",
   "emr_timeout": 600,
