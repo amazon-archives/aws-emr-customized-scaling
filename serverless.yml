@@ -19,7 +19,7 @@ service: aws-emr-customized-scaling # NOTE: update this with your service name
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   stage: ${opt:stage, 'dev'}
   region: ${file(./config.${self:provider.stage}.json):region}
 
