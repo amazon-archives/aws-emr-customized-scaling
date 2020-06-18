@@ -12,11 +12,10 @@
   ],
   "author": "Joe SHI <hellojoeshi@gmail.com>",
   "license": "MIT",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
-    "aws-sdk": "^2.453.0",
+    "aws-sdk": "^2.699.0",
     "chai": "^4.2.0",
-    "mocha": "^6.1.4"
+    "mocha": "^8.0.1"
   }
 }
