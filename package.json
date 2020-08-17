@@ -14,8 +14,8 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
-    "aws-sdk": "^2.699.0",
-    "chai": "^4.2.0",
-    "mocha": "^8.0.1"
+    "aws-sdk": "2.734.0",
+    "chai": "4.2.0",
+    "mocha": "8.1.1"
   }
 }
